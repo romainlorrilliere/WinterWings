@@ -9,49 +9,61 @@ for(p in vecPackage)
 
 require(reshape2)
 
-read.data <- function() {
+read.data <- function(fileName="data/winterwings_data.csv",output=FALSE) {
 
     library(reshape2)
-library(stringi)
+    library(stringi)
     tsp <- read.csv2("data/species.csv",stringsAsFactors=FALSE)
 #  Sys.setlocale(category = "LC_ALL", locale="Korean")
     vecFile <- list.files("data_csv/")
+    cat("\nImporting",length(vecFile),"files\n\n")
     taball <- NULL
+    i <- 0
     for(f in vecFile) {
-      ##  f <- vecFile[36]
+        i <- i + 1
+     ##   f <- vecFile[1]
      ##   f_encod<- rawToChar(readBin(file_name, "raw", 100000))
-     ##   stri_enc_detect(f)
+        ##   stri_enc_detect(f)
         file_name <- paste("data_csv/",f,sep="")
+        cat(i,"/",length(vecFile),": ",file_name,"\n",sep="")
         df <- read.csv(file_name,stringsAsFactors=FALSE,encoding="EUC-KR")
+        if(ncol(df) == 1) df <- read.csv2(file_name,stringsAsFactors=FALSE,encoding="EUC-KR")
      ##   head(df)
         df1 <- df[1:15,1:2]
 
         dfeed <- df[17:23,1:2]
-        feed <- as.character(dfeed[which(!(dfeed[,2]%in% c(""," "))),1])
+        vfeed_eng <- c("Type of feeder","","No feeder","","Feed on the ground","","High up feeder(s)")
+        feed <- as.character(vfeed_eng[which(!(dfeed[,2]%in% c(""," ")))])
         if(length(feed)!=1) feed <- paste(feed,collapse="|")
 
         denv <- df[26:31,1:2]
-        env <- as.character(denv[which(!(denv[,2]%in% c(""," "))),1])
+        venv_eng <- c("The main environment around me","","Urban area","Agriculture area","Forest","Aquatic areas (wetlands, rivers, sea")
+        env <- as.character(venv_eng[which(!(denv[,2]%in% c(""," ")))])
         if(length(env)!=1) env <- paste(env,collapse="|")
 
         dtemp <- df[2:9,4:5]
-        temp <- as.character(dtemp[which(!(dtemp[,2]%in% c(""," "))),1])
+        vtemp_eng <- c("Environmental conditions","Temperatures","Under -18","-18 to -10","-9 to 0","1 to 10","11 to 20","Over 20")
+        temp <- as.character(vtemp_eng[which(!(dtemp[,2]%in% c(""," ")))])
         if(length(temp)!=1) temp <- paste(temp,collapse="|")
 
         dprecType <- df[12:16,4:5]
-        precType <- as.character(dprecType[which(!(dprecType[,2]%in% c(""," "))),1])
+        vprecType_eng <- c("Type","None","Rain","Rain/Snow","Snow")
+        precType <- as.character(vprecType_eng[which(!(dprecType[,2]%in% c(""," ")))])
         if(length(precType)!=1) precType <- paste(precType,collapse="|")
 
         dprecWhen <- df[17:21,4:5]
-        precWhen <- as.character(dprecWhen[which(!(dprecWhen[,2]%in% c(""," "))),1])
+        vprecWhen_eng <- c("When?","None","During 1st session","During 2nd session","During the next session(s)")
+        precWhen <- as.character(vprecWhen_eng[which(!(dprecWhen[,2]%in% c(""," ")))])
         if(length(precWhen)!=1) precWhen <- paste(precWhen,collapse="|")
 
         dprecHow <- df[23:24,4:5]
-        precHow <- as.character(dprecHow[which(!(dprecHow[,2]%in% c(""," "))),1])
+        vprecHow_eng <- c("Partially","All the time")
+        precHow <- as.character(vprecHow_eng[which(!(dprecHow[,2]%in% c(""," ")))])
         if(length(precHow)!=1) precHow <- paste(precHow,collapse="|")
 
         dprecSnow <- df[27:32,4:5]
-        precSnow <- as.character(dprecSnow[which(!(dprecSnow[,2]%in% c(""," "))),1])
+        vprecSnow_eng <- c("None","under 5 cm ","5 cm to 15 cm","over 15 cm","Hard crust or ice covers snow","Snow cover is patchy (under 0.5 cover)")
+        precSnow <- as.character(vprecSnow_eng[which(!(dprecSnow[,2]%in% c(""," ")))])
         if(length(precSnow)!=1) precSnow <- paste(precSnow,collapse="|")
 
 
@@ -99,6 +111,8 @@ library(stringi)
     }
 
 
-    write.csv(taball,"data/database_winterwing.csv",encoding="UTF-8",row.names=FALSE)
+    write.csv(taball,fileName,fileEncoding="UTF-8",row.names=FALSE)
+    cat("\n\n--> Data saved in :",fileName,"\n")
 
+    if(output) return(taball)
 }
