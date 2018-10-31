@@ -17,8 +17,8 @@ library(stringi)
 #  Sys.setlocale(category = "LC_ALL", locale="Korean")
     vecFile <- list.files("data_csv/")
     taball <- NULL
-    for(f in vecFile[1:30]) {
-        f <- vecFile[36]
+    for(f in vecFile) {
+      ##  f <- vecFile[36]
      ##   f_encod<- rawToChar(readBin(file_name, "raw", 100000))
      ##   stri_enc_detect(f)
         file_name <- paste("data_csv/",f,sep="")
