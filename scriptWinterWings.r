@@ -1,6 +1,6 @@
 # script pour hortense pour le telechargement de ses photos
 
-vecPackage=c("ade4","akima","data.table","date","devtools","dismo","doBy","dplyr","factoextra","gam","ggmap","gdata","ggplot2","gstat","lme4","lubridate","mapdata","mapproj","maps","maptools","MASS","mgcv","mgcViz","MuMIn","nlme","partykit","party","plyr","rattle","reshape","reshape2","rgdal","RMySQL","RODBC","rpart","rpart.plot","RPostgreSQL","siland","snow","sp","StreamMetabolism","stringr","survMisc","vegan","xlsx")
+vecPackage=c("ade4","akima","data.table","date","devtools","dismo","doBy","dplyr","factoextra","gam","ggmap","gdata","ggplot2","gstat","lme4","lubridate","mapdata","mapproj","maps","maptools","MASS","mgcv","mgcViz","MuMIn","nlme","partykit","party","plyr","rattle","reshape","reshape2","rgdal","RMySQL","RODBC","rpart","rpart.plot","RPostgreSQL","siland","snow","sp","StreamMetabolism","stringi","stringr","survMisc","vegan","xlsx")
 ip <- installed.packages()[,1]
 
 for(p in vecPackage)
@@ -12,15 +12,18 @@ require(reshape2)
 read.data <- function() {
 
     library(reshape2)
-
+library(stringi)
     tsp <- read.csv2("data/species.csv",stringsAsFactors=FALSE)
 #  Sys.setlocale(category = "LC_ALL", locale="Korean")
     vecFile <- list.files("data_csv/")
     taball <- NULL
-    for(f in vecFile) {
-       ## f <- vecFile[1]
+    for(f in vecFile[1:30]) {
+        f <- vecFile[36]
+     ##   f_encod<- rawToChar(readBin(file_name, "raw", 100000))
+     ##   stri_enc_detect(f)
         file_name <- paste("data_csv/",f,sep="")
-        df <- read.csv2(file_name,stringsAsFactors=FALSE)
+        df <- read.csv(file_name,stringsAsFactors=FALSE,encoding="EUC-KR")
+     ##   head(df)
         df1 <- df[1:15,1:2]
 
         dfeed <- df[17:23,1:2]
@@ -96,6 +99,6 @@ read.data <- function() {
     }
 
 
-    write.csv(taball,"data/database_winterwing.csv",encoding="utf8",row.names=FALSE)
+    write.csv(taball,"data/database_winterwing.csv",encoding="UTF-8",row.names=FALSE)
 
 }
