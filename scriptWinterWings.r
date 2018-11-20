@@ -116,3 +116,210 @@ read.data <- function(fileName="data/winterwings_data.csv",output=FALSE) {
 
     if(output) return(taball)
 }
+
+
+analysisEffortEffect <- function(dataFile="data/winterwings_data.csv",output=FALSE) {
+
+    dataFile="data/winterwings_data.csv";output=FALSE
+
+    library(reshape2)
+    library(ggplot2)
+    library(lme4)
+
+    d <- read.csv(dataFile,stringsAsFactor=FALSE)
+
+    d$id <- as.numeric(as.factor(d$nomFile))
+    d$obs <- as.numeric(as.factor(d$observator))
+    d <- subset(d,select=c("id","obs","date","time","feeder","environment","temperature","session","sc_name","abundance"))
+
+    dw <- dcast(id+obs+date+time+feeder+environment+temperature+sc_name~session,data=d, value.var="abundance")
+    dw[is.na(dw)] <- 0
+
+
+    d <- melt(dw,id.vars = c("id","obs","date","time","feeder","environment","temperature","sc_name"),variable.name = "session",  value.name = "abundance")
+
+    d <- subset(d,feeder !="")
+    d$session <- as.character(d$session)
+    d1 <- subset(d,session==1)
+    d1$session <- "s1"
+    d2 <- subset(d,session==2)
+    d2$session <- "s2"
+    dall <- aggregate(abundance~id+obs+date+time+feeder+environment+temperature+sc_name,data=d,max)
+    dall$session <- "all"
+    dall <- dall[,colnames(d1)]
+    dall$session <- as.character(dall$session)
+    dd <- rbind(rbind(d1,d2),dall)
+    dd$pres <- as.numeric(dd$abundance>0)
+
+    ddiv <- aggregate(pres~id+obs+date+time+feeder+environment+temperature+session,dd,sum)
+    ddiv.w <- dcast(id+obs+date+time+feeder+environment+temperature~session,data=ddiv,value.var="pres")
+
+    ddiv.w$diffToAll <- ddiv.w$all-ddiv.w$s1
+    ddiv.w$propToAll <- ddiv.w$s1/ddiv.w$all
+    ddiv.w$diffTo2 <- ddiv.w$s2-ddiv.w$s1
+    ddiv.w$propTo2 <- ddiv.w$s1/ddiv.w$s2
+    ddiv.w$obs <- as.character(ddiv.w$obs)
+    colnames(ddiv.w)[8:14] <- paste("div_",colnames(ddiv.w)[8:14],sep="")
+
+
+
+    dab <- aggregate(abundance~id+obs+date+time+feeder+environment+temperature+session,dd,sum)
+    dab.w <- dcast(id+obs+date+time+feeder+environment+temperature~session,data=dab,value.var="abundance")
+
+    dab.w$diffToAll <- dab.w$all-dab.w$s1
+    dab.w$propToAll <- dab.w$s1/dab.w$all
+    dab.w$diffTo2 <- dab.w$s2-dab.w$s1
+    dab.w$propTo2 <- dab.w$s1/dab.w$s2
+
+    dab.w$obs <- as.character(dab.w$obs)
+    colnames(dab.w)[8:14] <- paste("ab_",colnames(dab.w)[8:14],sep="")
+
+
+    dd.w <- merge(ddiv.w,dab.w,by=c("id","obs","date","time","feeder","environment","temperature"),all=TRUE)
+
+
+    dupli <- duplicated(dd.w[,-1])
+    dd.w <- dd.w[!dupli,]
+
+    dd.w <- subset(dd.w,ab_all < 1000)
+
+    dd.w$inf50 <- ifelse(dd.w$ab_all<50,"abundance all < 50","abundance all >= 50")
+
+
+    ddpropToAll.gg <- melt(dd.w[,c(1:7,12,19,22)],id.vars=c("id","obs","date","time","feeder","environment","temperature","inf50"))
+    ddpropToAll.gg$variable <- as.character(ddpropToAll.gg$variable)
+    ddpropToAll.gg$variable[grep("div", ddpropToAll.gg$variable)] <- "diversity"
+    ddpropToAll.gg$variable[grep("ab", ddpropToAll.gg$variable)] <- "abundance"
+    colnames(ddpropToAll.gg)[ncol(ddpropToAll.gg)] <- "propToAll"
+
+
+
+    ddpropTo2.gg <- melt(dd.w[,c(1:7,14,21,22)],id.vars=c("id","obs","date","time","feeder","environment","temperature","inf50"))
+    ddpropTo2.gg$variable <- as.character(ddpropTo2.gg$variable)
+    ddpropTo2.gg$variable[grep("div", ddpropTo2.gg$variable)] <- "diversity"
+    ddpropTo2.gg$variable[grep("ab", ddpropTo2.gg$variable)] <- "abundance"
+    colnames(ddpropTo2.gg)[ncol(ddpropTo2.gg)] <- "propTo2"
+
+
+
+
+    dds1.gg <- melt(dd.w[,c(1:7,9,16,22)],id.vars=c("id","obs","date","time","feeder","environment","temperature","inf50"))
+    dds1.gg$variable <- as.character(dds1.gg$variable)
+    dds1.gg$variable[grep("div", dds1.gg$variable)] <- "diversity"
+    dds1.gg$variable[grep("ab", dds1.gg$variable)] <- "abundance"
+    colnames(dds1.gg)[ncol(dds1.gg)] <- "s1"
+
+
+    dds2.gg <- melt(dd.w[,c(1:7,10,17,22)],id.vars=c("id","obs","date","time","feeder","environment","temperature","inf50"))
+    dds2.gg$variable <- as.character(dds2.gg$variable)
+    dds2.gg$variable[grep("div", dds2.gg$variable)] <- "diversity"
+    dds2.gg$variable[grep("ab", dds2.gg$variable)] <- "abundance"
+    colnames(dds2.gg)[ncol(dds2.gg)] <- "s2"
+
+
+    dd.gg <- merge(merge(merge(dds1.gg,dds2.gg,by=c("id","obs","date","time","feeder","environment","temperature","inf50","variable")),ddpropToAll.gg,by=c("id","obs","date","time","feeder","environment","temperature","inf50","variable")),ddpropTo2.gg,by=c("id","obs","date","time","feeder","environment","temperature","inf50","variable"))
+
+
+
+     gg <- ggplot(dd.gg,aes(x=s1,y=s2,colour=environment))+ geom_abline(slope=1,intercept=0,size=1.2)+ geom_point(alpha=.5,size=2)+facet_wrap(inf50~variable,scales="free")
+    gg <- gg + labs(x="first session",y="second session",title = "Diference between first and second session",colour="Environment",shape="Observator")
+gg
+    ggsave("output/diff_s1_s2.png",gg,width=14,height=9)
+
+
+
+
+   gg <- ggplot(dd.gg,aes(y=propToAll,x=""))+facet_wrap(inf50~variable,scales="free")+geom_violin()+geom_boxplot(width=.05)
+    gg <- gg + labs(x="",y="First session / (First + second session)",title = "Proportion of observation during first session amoung both sessions")
+    ggsave("output/prop_s1_all.png",gg)
+
+
+
+    gg <- ggplot(dd.gg,aes(y=propToAll,x=""))+facet_grid(inf50~variable,scales="free")+geom_hline(yintercept=1,colour="blue",size=1.1)
+    gg <- gg + geom_violin(size=.7,draw_quantiles = c(0.025,0.975),alpha=.7)
+    gg <- gg + geom_violin(size=.7,draw_quantiles = c(0.25,0.75),fill=NA)+geom_violin(size=1.1,draw_quantiles = c(0.5),fill=NA)
+  #  gg <- gg + geom_boxplot(width=.05)
+    gg <- gg + labs(x="",y="First session / (First + second session)",title = "Proportion of observation during first session amoung both sessions")
+    gg
+    ggsave("output/prop_s1_all.png",gg)
+
+
+
+
+
+
+    gg <- ggplot(dd.gg,aes(y=propTo2,x=""))+facet_grid(inf50~variable,scales="free")+geom_hline(yintercept=1,colour="blue",size=1.1)
+    gg <- gg + geom_violin(size=.7,draw_quantiles = c(0.025,0.975),alpha=.7)
+    gg <- gg + geom_violin(size=.7,draw_quantiles = c(0.25,0.75),fill=NA)+geom_violin(size=1.1,draw_quantiles = c(0.5),fill=NA)
+  #  gg <- gg + geom_boxplot(width=.05)
+    gg <- gg + labs(x="",y="First session / Second session",title = "Proportion of observation during first session in the face of second session")
+    gg
+    ggsave("output/prop_s1_s2.png",gg)
+
+
+
+
+
+    d$pres <- as.numeric(d$abundance > 0)
+    dsample <- aggregate(abundance~id+sc_name,d,max)
+    dsample$pres <- as.numeric(dsample$abundance>0)
+    ddsp <- aggregate(pres~sc_name,dsample,sum)
+
+    nbsample <- length(unique(d$id))
+
+    ddsp$prop <- ddsp$pres/nbsample
+
+
+    dsample1 <- aggregate(abundance~id+sc_name,subset(d,session==1),max)
+    dsample1$pres <- as.numeric(dsample1$abundance>0)
+    colnames(dsample1)[3:4] <- paste(colnames(dsample1)[3:4],"s1",sep="_")
+    dsample <- merge(dsample,dsample1,by=c("id","sc_name"),all.x=TRUE)
+
+    dsample2 <- aggregate(abundance~id+sc_name,subset(d,session==2),max)
+    dsample2$pres <- as.numeric(dsample2$abundance>0)
+    colnames(dsample2)[3:4] <- paste(colnames(dsample2)[3:4],"s2",sep="_")
+    dsample <- merge(dsample,dsample2,by=c("id","sc_name"),all.x=TRUE)
+
+    dsample$diff_pres <- dsample$pres_s1 - dsample$pres_s2
+
+    ddsp_session <- aggregate(diff_pres ~ sc_name,dsample,mean)
+
+    ddsp <- merge(ddsp,ddsp_session,by="sc_name")
+
+
+    ddsp$prop_pres <- abs(ddsp$diff_pres)
+    ddsp$session_pref <- ifelse(ddsp$diff_pres > 0,"More in session 1",ifelse(ddsp$diff_pres < 0,"More in session 2","equally"))
+
+   library(ggrepel)
+
+    gg <- ggplot(subset(ddsp,session_pref != "equally"),aes(x=prop,y=prop_pres,label=sc_name))+ facet_grid(session_pref~.)
+        gg <- gg + geom_point()
+    gg <- gg + geom_text_repel()
+    gg
+    ggsave("output/unbalanced_sp_in_session.png",gg)
+
+
+table_pref <- table(subset(ddsp,prop_pres > .5)$session_pref)
+
+
+    md <- glmer( ~ session * feeder + (1|nomFile), ddiv,family = "poisson")
+    smd <- summary(md)
+    print(smd)
+
+
+      dab <- aggregate(abundance~nomFile+date+feeder+environment+temperature+session,dd,sum)
+
+
+    gg <- ggplot(dab,aes(y=abundance,x=session,group=nomFile,colour=feeder))+geom_point()+geom_line() + geom_boxplot()
+    gg
+
+library(lme4)
+    md <- glmer(abundance ~ session * feeder + (1|nomFile), ddiv,family = "poisson")
+    smd <- summary(md)
+    print(smd)
+
+
+
+
+
+}
